@@ -5,24 +5,25 @@
 const STORAGE_KEYS = {
   calculations: "spotter-calculations",
   workouts: "spotter-workouts",
-  activeWorkout: "spotter-active-workout"
+  activeWorkout: "spotter-active-workout",
+  unit: "spotter-weight-unit"
 };
 
-let calculations = loadArray(
-  STORAGE_KEYS.calculations
-);
-
-let workouts = normalizeWorkouts(
-  loadArray(STORAGE_KEYS.workouts)
-);
-
-let activeWorkoutId = localStorage.getItem(
-  STORAGE_KEYS.activeWorkout
-);
+let calculations = [];
+let workouts = [];
+let activeWorkoutId = null;
 
 let editingCalculationId = null;
 let editingSetId = null;
 let editingSetWorkoutId = null;
+
+let viewedWorkoutId = null;
+let editingExistingWorkout = false;
+
+let weightUnit =
+  localStorage.getItem(
+    STORAGE_KEYS.unit
+  ) || "lb";
 
 
 /* -------------------------
@@ -183,6 +184,59 @@ const workoutHistory =
   );
 
 
+/* Workout view */
+
+const workoutViewSection =
+  document.getElementById(
+    "workoutViewSection"
+  );
+
+const backToWorkoutHistoryButton =
+  document.getElementById(
+    "backToWorkoutHistoryButton"
+  );
+
+const editViewedWorkoutButton =
+  document.getElementById(
+    "editViewedWorkoutButton"
+  );
+
+const viewedWorkoutName =
+  document.getElementById(
+    "viewedWorkoutName"
+  );
+
+const viewedWorkoutDate =
+  document.getElementById(
+    "viewedWorkoutDate"
+  );
+
+const viewedWorkoutSummary =
+  document.getElementById(
+    "viewedWorkoutSummary"
+  );
+
+const viewedWorkoutExercises =
+  document.getElementById(
+    "viewedWorkoutExercises"
+  );
+
+const activeWorkoutEyebrow =
+  document.getElementById(
+    "activeWorkoutEyebrow"
+  );
+
+const finishWorkoutButtonText =
+  document.getElementById(
+    "finishWorkoutButtonText"
+  );
+
+const finishWorkoutButtonIcon =
+  document.getElementById(
+    "finishWorkoutButtonIcon"
+  );
+
+
 /* Progress */
 
 const progressExercise =
@@ -204,6 +258,475 @@ const progressTableBody =
   document.getElementById(
     "progressTableBody"
   );
+
+const completedWorkoutsValue =
+  document.getElementById(
+    "completedWorkoutsValue"
+  );
+
+const totalSetsValue =
+  document.getElementById(
+    "totalSetsValue"
+  );
+
+const totalRepsValue =
+  document.getElementById(
+    "totalRepsValue"
+  );
+
+const totalVolumeValue =
+  document.getElementById(
+    "totalVolumeValue"
+  );
+
+
+/* Weight units */
+
+const poundsButton =
+  document.getElementById(
+    "poundsButton"
+  );
+
+const kilogramsButton =
+  document.getElementById(
+    "kilogramsButton"
+  );
+
+const weightLabels =
+  document.querySelectorAll(
+    "[data-weight-label]"
+  );
+
+
+/* Calculator modes */
+
+const oneRepMaxModeButton =
+  document.getElementById(
+    "oneRepMaxModeButton"
+  );
+
+const repMaxModeButton =
+  document.getElementById(
+    "repMaxModeButton"
+  );
+
+const oneRepMaxCalculatorPanel =
+  document.getElementById(
+    "oneRepMaxCalculatorPanel"
+  );
+
+const repMaxCalculatorPanel =
+  document.getElementById(
+    "repMaxCalculatorPanel"
+  );
+
+const repMaxExercise =
+  document.getElementById(
+    "repMaxExercise"
+  );
+
+const repMaxWeight =
+  document.getElementById(
+    "repMaxWeight"
+  );
+
+const repMaxReps =
+  document.getElementById(
+    "repMaxReps"
+  );
+
+const generateRepMaxTableButton =
+  document.getElementById(
+    "generateRepMaxTableButton"
+  );
+
+const repMaxResult =
+  document.getElementById(
+    "repMaxResult"
+  );
+
+const repMaxResultsSection =
+  document.getElementById(
+    "repMaxResultsSection"
+  );
+
+const repMaxTableBody =
+  document.getElementById(
+    "repMaxTableBody"
+  );
+
+
+/* -------------------------
+   WEIGHT UNITS
+------------------------- */
+
+const POUNDS_PER_KILOGRAM =
+  2.2046226218;
+
+
+function convertWeight(
+  weight,
+  fromUnit,
+  toUnit
+) {
+  const numericWeight =
+    Number(weight);
+
+  if (
+    !Number.isFinite(numericWeight) ||
+    fromUnit === toUnit
+  ) {
+    return numericWeight;
+  }
+
+  const convertedWeight =
+    fromUnit === "lb"
+      ? numericWeight /
+        POUNDS_PER_KILOGRAM
+      : numericWeight *
+        POUNDS_PER_KILOGRAM;
+
+  return convertedWeight;
+}
+
+
+function convertWeightInput(
+  input,
+  fromUnit,
+  toUnit
+) {
+  if (
+    !input ||
+    input.value.trim() === ""
+  ) {
+    return;
+  }
+
+  input.value =
+    formatWeight(
+      convertWeight(
+        input.value,
+        fromUnit,
+        toUnit
+      )
+    );
+}
+
+
+function convertStoredWeights(
+  fromUnit,
+  toUnit
+) {
+  calculations =
+    calculations.map(
+      function (calculation) {
+        const convertedWeight =
+          convertWeight(
+            calculation.weight,
+            fromUnit,
+            toUnit
+          );
+
+        return {
+          ...calculation,
+          weight:
+            convertedWeight,
+          estimatedOneRepMax:
+            calculateEstimatedOneRepMax(
+              convertedWeight,
+              Number(
+                calculation.reps
+              )
+            )
+        };
+      }
+    );
+
+  workouts =
+    workouts.map(
+      function (workout) {
+        return {
+          ...workout,
+          sets:
+            workout.sets.map(
+              function (set) {
+                const convertedWeight =
+                  convertWeight(
+                    set.weight,
+                    fromUnit,
+                    toUnit
+                  );
+
+                return {
+                  ...set,
+                  weight:
+                    convertedWeight,
+                  estimatedOneRepMax:
+                    calculateEstimatedOneRepMax(
+                      convertedWeight,
+                      Number(
+                        set.reps
+                      )
+                    )
+                };
+              }
+            )
+        };
+      }
+    );
+}
+
+
+function updateDisplayedUnits() {
+  if (poundsButton) {
+    poundsButton.classList.toggle(
+      "active",
+      weightUnit === "lb"
+    );
+
+    poundsButton.setAttribute(
+      "aria-pressed",
+      String(
+        weightUnit === "lb"
+      )
+    );
+  }
+
+  if (kilogramsButton) {
+    kilogramsButton.classList.toggle(
+      "active",
+      weightUnit === "kg"
+    );
+
+    kilogramsButton.setAttribute(
+      "aria-pressed",
+      String(
+        weightUnit === "kg"
+      )
+    );
+  }
+
+  weightLabels.forEach(
+    function (label) {
+      label.textContent =
+        `Weight (${weightUnit})`;
+    }
+  );
+
+  const inputStep =
+    weightUnit === "lb"
+      ? "5"
+      : "2.5";
+
+  if (calculatorWeight) {
+    calculatorWeight.step =
+      inputStep;
+  }
+
+  if (workoutWeight) {
+    workoutWeight.step =
+      inputStep;
+  }
+
+  if (repMaxWeight) {
+    repMaxWeight.step =
+      inputStep;
+  }
+}
+
+
+function refreshCalculatorEstimate() {
+  if (
+    !calculatorResult.textContent.startsWith(
+      "Estimated 1RM:"
+    )
+  ) {
+    return;
+  }
+
+  const weight =
+    Number(
+      calculatorWeight.value
+    );
+
+  const reps =
+    Number(
+      calculatorReps.value
+    );
+
+  if (
+    !Number.isFinite(weight) ||
+    weight <= 0
+  ) {
+    return;
+  }
+
+  const estimate =
+    calculateEstimatedOneRepMax(
+      weight,
+      reps
+    );
+
+  showMessage(
+    calculatorResult,
+    `Estimated 1RM: ${estimate} ${weightUnit}`
+  );
+}
+
+
+function changeWeightUnit(
+  newUnit
+) {
+  if (
+    newUnit !== "lb" &&
+    newUnit !== "kg"
+  ) {
+    return;
+  }
+
+  if (
+    newUnit === weightUnit
+  ) {
+    return;
+  }
+
+  const previousUnit =
+    weightUnit;
+
+  convertWeightInput(
+    calculatorWeight,
+    previousUnit,
+    newUnit
+  );
+
+  convertWeightInput(
+    workoutWeight,
+    previousUnit,
+    newUnit
+  );
+
+  convertWeightInput(
+    repMaxWeight,
+    previousUnit,
+    newUnit
+  );
+
+  convertStoredWeights(
+    previousUnit,
+    newUnit
+  );
+
+  weightUnit = newUnit;
+
+  localStorage.setItem(
+    STORAGE_KEYS.unit,
+    weightUnit
+  );
+
+  saveCalculations();
+  saveWorkouts();
+
+  renderCalculations();
+  renderWorkoutApp();
+  refreshCalculatorEstimate();
+
+  if (
+    repMaxResultsSection &&
+    !repMaxResultsSection.classList.contains(
+      "hidden"
+    )
+  ) {
+    generateRepMaxTable();
+  }
+
+  updateDisplayedUnits();
+}
+
+
+if (poundsButton) {
+  poundsButton.addEventListener(
+    "click",
+    function () {
+      changeWeightUnit("lb");
+    }
+  );
+}
+
+
+if (kilogramsButton) {
+  kilogramsButton.addEventListener(
+    "click",
+    function () {
+      changeWeightUnit("kg");
+    }
+  );
+}
+
+
+/* -------------------------
+   CALCULATOR MODES
+------------------------- */
+
+function openCalculatorMode(mode) {
+  const showOneRepMax =
+    mode === "one-rep-max";
+
+  oneRepMaxModeButton.classList.toggle(
+    "active",
+    showOneRepMax
+  );
+
+  repMaxModeButton.classList.toggle(
+    "active",
+    !showOneRepMax
+  );
+
+  oneRepMaxModeButton.setAttribute(
+    "aria-selected",
+    String(showOneRepMax)
+  );
+
+  repMaxModeButton.setAttribute(
+    "aria-selected",
+    String(!showOneRepMax)
+  );
+
+  oneRepMaxCalculatorPanel.classList.toggle(
+    "active",
+    showOneRepMax
+  );
+
+  repMaxCalculatorPanel.classList.toggle(
+    "active",
+    !showOneRepMax
+  );
+
+  oneRepMaxCalculatorPanel.hidden =
+    !showOneRepMax;
+
+  repMaxCalculatorPanel.hidden =
+    showOneRepMax;
+}
+
+
+oneRepMaxModeButton.addEventListener(
+  "click",
+  function () {
+    openCalculatorMode(
+      "one-rep-max"
+    );
+  }
+);
+
+
+repMaxModeButton.addEventListener(
+  "click",
+  function () {
+    openCalculatorMode(
+      "rep-max-table"
+    );
+  }
+);
 
 
 /* -------------------------
@@ -266,15 +789,7 @@ function setDefaultWorkoutDate() {
 
 
 function updateDefaultWorkoutName() {
-  if (!newWorkoutDate.value) {
-    newWorkoutName.value = "";
-    return;
-  }
-
-  newWorkoutName.value =
-    `${formatNumericDate(
-      newWorkoutDate.value
-    )} Workout`;
+  newWorkoutName.value = "Workout";
 }
 
 
@@ -288,29 +803,50 @@ newWorkoutDate.addEventListener(
    ESTIMATED 1RM
 ------------------------- */
 
-function calculateEstimatedOneRepMax(
-  weight,
-  reps
-) {
+function getOneRepMaxMultiplier(reps) {
   if (reps < 10) {
     const x = reps - 1;
 
-    const multiplier =
+    return (
       1 +
       0.0492830814 * x -
       0.00222173852 * x ** 2 +
       0.0000858872093 * x ** 3 +
-      0.0000010874326 * x ** 4;
-
-    return Math.round(
-      weight * multiplier
+      0.0000010874326 * x ** 4
     );
   }
 
-  return Math.round(
-    weight * (1 + reps / 30)
+  return 1 + reps / 30;
+}
+
+
+function calculateEstimatedOneRepMax(
+  weight,
+  reps
+) {
+  return Number(
+    (
+      Number(weight) *
+      getOneRepMaxMultiplier(
+        Number(reps)
+      )
+    ).toFixed(1)
   );
 }
+
+
+function calculateEquivalentWeight(
+  estimatedOneRepMax,
+  reps
+) {
+  return (
+    Number(estimatedOneRepMax) /
+    getOneRepMaxMultiplier(
+      Number(reps)
+    )
+  );
+}
+
 
 
 /* -------------------------
@@ -344,7 +880,7 @@ function getCalculationInputs() {
   ) {
     showMessage(
       calculatorResult,
-      "Select a valid rep count.",
+      "Please enter a value between 1 and 100.",
       "error"
     );
 
@@ -377,7 +913,9 @@ calculateButton.addEventListener(
 
     showMessage(
       calculatorResult,
-      `Estimated 1RM: ${calculation.estimatedOneRepMax} lb`
+      `Estimated 1RM: ${formatWeight(
+            calculation.estimatedOneRepMax
+          )} ${weightUnit}`
     );
   }
 );
@@ -468,7 +1006,7 @@ function renderCalculations() {
         <td>
           ${formatWeight(
             calculation.weight
-          )} lb
+          )} ${weightUnit}
         </td>
 
         <td>
@@ -476,7 +1014,9 @@ function renderCalculations() {
         </td>
 
         <td>
-          ${calculation.estimatedOneRepMax} lb
+          ${formatWeight(
+            calculation.estimatedOneRepMax
+          )} ${weightUnit}
         </td>
 
         <td class="action-cell">
@@ -571,7 +1111,7 @@ function startEditingCalculation(id) {
     calculatorResult,
     `Editing ${calculation.exercise}: ${formatWeight(
       calculation.weight
-    )} lb × ${calculation.reps}`
+    )} ${weightUnit} × ${calculation.reps}`
   );
 
   window.scrollTo({
@@ -613,7 +1153,7 @@ function resetCalculator() {
   editingCalculationId = null;
 
   calculatorWeight.value = "";
-  calculatorReps.value = "1";
+  calculatorReps.value = "";
 
   saveCalculationButton.textContent =
     "Save Calculation";
@@ -650,6 +1190,117 @@ clearCalculationsButton.onclick =
       "All saved calculations cleared."
     );
   };
+
+
+/* -------------------------
+   REP MAX TABLE
+------------------------- */
+
+generateRepMaxTableButton.addEventListener(
+  "click",
+  generateRepMaxTable
+);
+
+
+function generateRepMaxTable() {
+  const weight =
+    Number(repMaxWeight.value);
+
+  const reps =
+    Number(repMaxReps.value);
+
+  if (
+    !Number.isFinite(weight) ||
+    weight <= 0
+  ) {
+    showMessage(
+      repMaxResult,
+      "Enter a valid weight.",
+      "error"
+    );
+
+    repMaxResultsSection.classList.add(
+      "hidden"
+    );
+
+    return;
+  }
+
+  if (
+    !Number.isInteger(reps) ||
+    reps < 1 ||
+    reps > 100
+  ) {
+    showMessage(
+      repMaxResult,
+      "Please enter a value between 1 and 100.",
+      "error"
+    );
+
+    repMaxResultsSection.classList.add(
+      "hidden"
+    );
+
+    return;
+  }
+
+  const estimatedOneRepMax =
+    calculateEstimatedOneRepMax(
+      weight,
+      reps
+    );
+
+  repMaxTableBody.innerHTML = "";
+
+  for (
+    let targetReps = 1;
+    targetReps <= 20;
+    targetReps += 1
+  ) {
+    const equivalentWeight =
+      calculateEquivalentWeight(
+        estimatedOneRepMax,
+        targetReps
+      );
+
+    const row =
+      document.createElement("tr");
+
+    const isEnteredSet =
+      targetReps === reps;
+
+    if (isEnteredSet) {
+      row.classList.add(
+        "entered-set-row"
+      );
+    }
+
+    row.innerHTML = `
+      <td>
+        ${targetReps}
+      </td>
+
+      <td>
+        ${formatWeight(
+          isEnteredSet
+            ? weight
+            : equivalentWeight
+        )} ${weightUnit}
+      </td>
+    `;
+
+    repMaxTableBody.appendChild(
+      row
+    );
+  }
+
+  repMaxResultsSection.classList.remove(
+    "hidden"
+  );
+
+  repMaxResult.textContent = "";
+  repMaxResult.className = "result";
+}
 
 
 /* -------------------------
@@ -695,6 +1346,8 @@ createWorkoutButton.addEventListener(
 
     workouts.push(workout);
     activeWorkoutId = workout.id;
+    viewedWorkoutId = null;
+    editingExistingWorkout = false;
 
     resetSetEditor();
 
@@ -756,7 +1409,7 @@ addSetButton.addEventListener(
     ) {
       showMessage(
         workoutResult,
-        "Select a valid rep count.",
+        "Please enter a value between 1 and 100.",
         "error"
       );
 
@@ -807,7 +1460,7 @@ addSetButton.addEventListener(
     showMessage(
       workoutResult,
       isPR
-        ? "Set added — current PR!"
+        ? "Set added — this set is a new PR!"
         : "Set added.",
       isPR
         ? "pr-message"
@@ -869,7 +1522,7 @@ function updateSet(
   showMessage(
     workoutResult,
     isPR
-      ? "Set updated — current PR!"
+      ? "Set updated — this set is a new PR!"
       : "Set updated.",
     isPR
       ? "pr-message"
@@ -942,7 +1595,7 @@ function startEditingSet(
     workoutResult,
     `Editing ${set.exercise}: ${formatWeight(
       set.weight
-    )} lb × ${set.reps}`
+    )} ${weightUnit} × ${set.reps}`
   );
 
   activeWorkoutSection.scrollIntoView({
@@ -981,7 +1634,7 @@ function resetSetEditor() {
 
 function resetSetInputs() {
   workoutWeight.value = "";
-  workoutReps.value = "1";
+  workoutReps.value = "";
   workoutWeight.focus();
 }
 
@@ -996,7 +1649,27 @@ finishWorkoutButton.addEventListener(
     const workout =
       getActiveWorkout();
 
+    if (
+      !workout ||
+      workout.sets.length === 0
+    ) {
+      showMessage(
+        workoutResult,
+        "Add at least one set before finishing the workout.",
+        "error"
+      );
+
+      return;
+    }
+
+    const completedWorkoutId =
+      workout.id;
+
+    const wasEditingExistingWorkout =
+      editingExistingWorkout;
+
     activeWorkoutId = null;
+    editingExistingWorkout = false;
 
     resetSetEditor();
 
@@ -1004,15 +1677,32 @@ finishWorkoutButton.addEventListener(
       STORAGE_KEYS.activeWorkout
     );
 
+    saveWorkouts();
+
+    if (wasEditingExistingWorkout) {
+      viewedWorkoutId =
+        completedWorkoutId;
+
+      renderWorkoutApp();
+      renderWorkoutView();
+
+      showMessage(
+        createWorkoutResult,
+        "Workout changes saved."
+      );
+
+      return;
+    }
+
+    viewedWorkoutId = null;
+
     renderWorkoutApp();
     setDefaultWorkoutDate();
 
-    if (workout) {
-      showMessage(
-        createWorkoutResult,
-        "Workout finished."
-      );
-    }
+    showMessage(
+      createWorkoutResult,
+      "Workout finished."
+    );
   }
 );
 
@@ -1025,14 +1715,26 @@ function renderWorkoutApp() {
   const activeWorkout =
     getActiveWorkout();
 
+  const viewingWorkout =
+    Boolean(
+      viewedWorkoutId &&
+      !activeWorkout
+    );
+
   createWorkoutCard.classList.toggle(
     "hidden",
-    Boolean(activeWorkout)
+    Boolean(activeWorkout) ||
+      viewingWorkout
   );
 
   activeWorkoutSection.classList.toggle(
     "hidden",
     !activeWorkout
+  );
+
+  workoutViewSection.classList.toggle(
+    "hidden",
+    !viewingWorkout
   );
 
   if (activeWorkout) {
@@ -1041,6 +1743,27 @@ function renderWorkoutApp() {
 
     activeWorkoutDate.textContent =
       formatDate(activeWorkout.date);
+
+    if (activeWorkoutEyebrow) {
+      activeWorkoutEyebrow.textContent =
+        editingExistingWorkout
+          ? "Editing Workout"
+          : "Active Workout";
+    }
+
+    if (finishWorkoutButtonText) {
+      finishWorkoutButtonText.textContent =
+        editingExistingWorkout
+          ? "Save Changes"
+          : "Finish Workout";
+    }
+
+    if (finishWorkoutButtonIcon) {
+      finishWorkoutButtonIcon.className =
+        editingExistingWorkout
+          ? "fa-solid fa-floppy-disk"
+          : "fa-solid fa-flag-checkered";
+    }
 
     renderExerciseGroups(
       activeWorkout,
@@ -1051,21 +1774,42 @@ function renderWorkoutApp() {
       "";
   }
 
+  if (viewingWorkout) {
+    renderWorkoutView();
+  }
+
   renderWorkoutHistory();
   renderProgress();
+  updateDisplayedUnits();
 }
 
 
 function renderWorkoutHistory() {
   workoutHistory.innerHTML = "";
 
+  const completedWorkouts =
+    workouts.filter(
+      function (workout) {
+        const isActiveWorkout =
+          activeWorkoutId &&
+          String(workout.id) ===
+          String(activeWorkoutId);
+
+        return (
+          !isActiveWorkout &&
+          Array.isArray(workout.sets) &&
+          workout.sets.length > 0
+        );
+      }
+    );
+
   workoutHistorySection.classList.toggle(
     "hidden",
-    workouts.length === 0
+    completedWorkouts.length === 0
   );
 
   const sortedWorkouts =
-    [...workouts].sort(
+    [...completedWorkouts].sort(
       function (a, b) {
         const dateDifference =
           b.date.localeCompare(a.date);
@@ -1124,12 +1868,26 @@ function renderWorkoutHistory() {
       details.className =
         "workout-card";
 
+      if (
+        viewedWorkoutId &&
+        String(workout.id) ===
+        String(viewedWorkoutId)
+      ) {
+        details.classList.add(
+          "viewed-workout-card"
+        );
+      }
+
       details.innerHTML = `
         <summary class="workout-summary">
           <div>
             <h3 class="workout-title">
               ${escapeHtml(workout.name)}
             </h3>
+
+            <p class="workout-history-date">
+              ${formatDate(workout.date)}
+            </p>
 
             <p class="summary-metrics">
               ${exerciseCount}
@@ -1145,7 +1903,7 @@ function renderWorkoutHistory() {
               · ${totalReps} reps
               · ${formatNumber(
                 totalVolume
-              )} lb volume
+              )} ${weightUnit} volume
             </p>
           </div>
 
@@ -1164,7 +1922,7 @@ function renderWorkoutHistory() {
               data-action="open-workout"
               data-id="${workout.id}"
             >
-              Open Workout
+              View Workout
             </button>
 
             <button
@@ -1295,7 +2053,7 @@ function renderExerciseGroups(
                   <span class="weight-cell">
                     ${formatWeight(
                       set.weight
-                    )} lb
+                    )} ${weightUnit}
 
                     ${
                       isHighestWeight
@@ -1313,11 +2071,13 @@ function renderExerciseGroups(
                   ${formatNumber(
                     Number(set.weight) *
                     Number(set.reps)
-                  )} lb
+                  )} ${weightUnit}
                 </td>
 
                 <td>
-                  ${set.estimatedOneRepMax} lb
+                  ${formatWeight(
+                    set.estimatedOneRepMax
+                  )} ${weightUnit}
                 </td>
 
                 <td class="action-cell">
@@ -1363,7 +2123,7 @@ function renderExerciseGroups(
               · ${totalReps} reps
               · ${formatNumber(
                 totalVolume
-              )} lb volume
+              )} ${weightUnit} volume
             </p>
           </div>
 
@@ -1457,7 +2217,7 @@ function handleWorkoutAction(button) {
     button.dataset.setId;
 
   if (action === "open-workout") {
-    openWorkout(workoutId);
+    viewWorkout(workoutId);
     return;
   }
 
@@ -1489,7 +2249,7 @@ function handleWorkoutAction(button) {
 }
 
 
-function openWorkout(id) {
+function viewWorkout(id) {
   const workout =
     workouts.find(
       function (item) {
@@ -1504,7 +2264,44 @@ function openWorkout(id) {
     return;
   }
 
+  activeWorkoutId = null;
+  editingExistingWorkout = false;
+  viewedWorkoutId = workout.id;
+
+  resetSetEditor();
+
+  localStorage.removeItem(
+    STORAGE_KEYS.activeWorkout
+  );
+
+  renderWorkoutApp();
+  openTab("workoutTab");
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+
+function startEditingViewedWorkout() {
+  const workout =
+    workouts.find(
+      function (item) {
+        return (
+          String(item.id) ===
+          String(viewedWorkoutId)
+        );
+      }
+    );
+
+  if (!workout) {
+    return;
+  }
+
   activeWorkoutId = workout.id;
+  editingExistingWorkout = true;
+  viewedWorkoutId = null;
 
   resetSetEditor();
 
@@ -1516,6 +2313,273 @@ function openWorkout(id) {
     top: 0,
     behavior: "smooth"
   });
+}
+
+
+function closeWorkoutView() {
+  viewedWorkoutId = null;
+  editingExistingWorkout = false;
+
+  renderWorkoutApp();
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+
+backToWorkoutHistoryButton.addEventListener(
+  "click",
+  closeWorkoutView
+);
+
+
+editViewedWorkoutButton.addEventListener(
+  "click",
+  startEditingViewedWorkout
+);
+
+
+function renderWorkoutView() {
+  const workout =
+    workouts.find(
+      function (item) {
+        return (
+          String(item.id) ===
+          String(viewedWorkoutId)
+        );
+      }
+    );
+
+  if (!workout) {
+    closeWorkoutView();
+    return;
+  }
+
+  viewedWorkoutName.textContent =
+    workout.name;
+
+  viewedWorkoutDate.textContent =
+    formatDate(workout.date);
+
+  const totalSets =
+    workout.sets.length;
+
+  const totalReps =
+    workout.sets.reduce(
+      function (total, set) {
+        return (
+          total +
+          Number(set.reps)
+        );
+      },
+      0
+    );
+
+  const totalVolume =
+    workout.sets.reduce(
+      function (total, set) {
+        return (
+          total +
+          Number(set.weight) *
+          Number(set.reps)
+        );
+      },
+      0
+    );
+
+  const exerciseCount =
+    Object.keys(
+      groupSetsByExercise(
+        workout.sets
+      )
+    ).length;
+
+  viewedWorkoutSummary.innerHTML = `
+    <article class="workout-summary-stat">
+      <span>Exercises</span>
+      <strong>${exerciseCount}</strong>
+    </article>
+
+    <article class="workout-summary-stat">
+      <span>Sets</span>
+      <strong>${totalSets}</strong>
+    </article>
+
+    <article class="workout-summary-stat">
+      <span>Reps</span>
+      <strong>${totalReps}</strong>
+    </article>
+
+    <article class="workout-summary-stat">
+      <span>Volume</span>
+      <strong>
+        ${formatNumber(
+          totalVolume
+        )} ${weightUnit}
+      </strong>
+    </article>
+  `;
+
+  renderReadOnlyExerciseGroups(
+    workout,
+    viewedWorkoutExercises
+  );
+}
+
+
+function renderReadOnlyExerciseGroups(
+  workout,
+  container
+) {
+  container.innerHTML = "";
+
+  if (workout.sets.length === 0) {
+    container.innerHTML = `
+      <p class="empty-workout-message">
+        No sets logged in this workout.
+      </p>
+    `;
+
+    return;
+  }
+
+  const groups =
+    groupSetsByExercise(
+      workout.sets
+    );
+
+  Object.entries(groups).forEach(
+    function ([exercise, sets]) {
+      const totalReps =
+        sets.reduce(
+          function (total, set) {
+            return (
+              total +
+              Number(set.reps)
+            );
+          },
+          0
+        );
+
+      const totalVolume =
+        sets.reduce(
+          function (total, set) {
+            return (
+              total +
+              Number(set.weight) *
+              Number(set.reps)
+            );
+          },
+          0
+        );
+
+      const bestEstimatedOneRepMax =
+        Math.max(
+          ...sets.map(
+            function (set) {
+              return Number(
+                set.estimatedOneRepMax
+              );
+            }
+          )
+        );
+
+      const details =
+        document.createElement(
+          "details"
+        );
+
+      details.className =
+        "exercise-card read-only-exercise-card";
+
+      const rows =
+        sets.map(
+          function (set, index) {
+            return `
+              <tr>
+                <td>${index + 1}</td>
+
+                <td>
+                  ${formatWeight(
+                    set.weight
+                  )} ${weightUnit}
+                </td>
+
+                <td>${set.reps}</td>
+
+                <td>
+                  ${formatNumber(
+                    Number(set.weight) *
+                    Number(set.reps)
+                  )} ${weightUnit}
+                </td>
+
+                <td>
+                  ${formatWeight(
+                    set.estimatedOneRepMax
+                  )} ${weightUnit}
+                </td>
+              </tr>
+            `;
+          }
+        )
+        .join("");
+
+      details.innerHTML = `
+        <summary class="exercise-summary">
+          <div>
+            <h4 class="exercise-title">
+              ${escapeHtml(exercise)}
+            </h4>
+
+            <p class="summary-metrics">
+              ${sets.length}
+              ${pluralize(
+                sets.length,
+                "set"
+              )}
+              · ${totalReps} reps
+              · ${formatNumber(
+                totalVolume
+              )} ${weightUnit} volume
+              · Best e1RM:
+              ${formatWeight(
+                bestEstimatedOneRepMax
+              )} ${weightUnit}
+            </p>
+          </div>
+
+          <span class="expand-label">
+            View Sets
+          </span>
+        </summary>
+
+        <div class="exercise-table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Set</th>
+                <th>Weight</th>
+                <th>Reps</th>
+                <th>Volume</th>
+                <th>Estimated 1RM</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      container.appendChild(
+        details
+      );
+    }
+  );
 }
 
 
@@ -1599,7 +2663,7 @@ function deleteSet(
     window.confirm(
       `Delete ${set.exercise}: ${formatWeight(
         set.weight
-      )} lb × ${set.reps}?`
+      )} ${weightUnit} × ${set.reps}?`
     );
 
   if (!confirmed) {
@@ -1700,7 +2764,28 @@ progressExercise.addEventListener(
 );
 
 
+progressTableBody.addEventListener(
+  "click",
+  function (event) {
+    const workoutLink =
+      event.target.closest(
+        ".progress-workout-link"
+      );
+
+    if (!workoutLink) {
+      return;
+    }
+
+    viewWorkout(
+      workoutLink.dataset.workoutId
+    );
+  }
+);
+
+
 function renderProgress() {
+  renderProgressSummary();
+
   const selectedExercise =
     progressExercise.value;
 
@@ -1776,7 +2861,7 @@ function renderProgress() {
 
       row.innerHTML = `
         <td>
-          ${formatWeight(set.weight)} lb
+          ${formatWeight(set.weight)} ${weightUnit}
         </td>
 
         <td>
@@ -1784,7 +2869,9 @@ function renderProgress() {
         </td>
 
         <td>
-          ${set.estimatedOneRepMax} lb
+          ${formatWeight(
+                    set.estimatedOneRepMax
+                  )} ${weightUnit}
         </td>
 
         <td>
@@ -1794,9 +2881,16 @@ function renderProgress() {
         </td>
 
         <td>
-          ${escapeHtml(
-            set.workoutName
-          )}
+          <button
+            class="progress-workout-link"
+            type="button"
+            data-workout-id="${set.workoutId}"
+            title="Open this workout"
+          >
+            ${escapeHtml(
+              set.workoutName
+            )}
+          </button>
         </td>
       `;
 
@@ -1805,6 +2899,71 @@ function renderProgress() {
       );
     }
   );
+}
+
+
+function renderProgressSummary() {
+  const completedWorkouts =
+    workouts.filter(
+      function (workout) {
+        const isActiveWorkout =
+          activeWorkoutId &&
+          String(workout.id) ===
+          String(activeWorkoutId);
+
+        return (
+          !isActiveWorkout &&
+          workout.sets.length > 0
+        );
+      }
+    );
+
+  const completedSets =
+    completedWorkouts.flatMap(
+      function (workout) {
+        return workout.sets;
+      }
+    );
+
+  const totalSets =
+    completedSets.length;
+
+  const totalReps =
+    completedSets.reduce(
+      function (total, set) {
+        return (
+          total +
+          Number(set.reps)
+        );
+      },
+      0
+    );
+
+  const totalVolume =
+    completedSets.reduce(
+      function (total, set) {
+        return (
+          total +
+          Number(set.weight) *
+          Number(set.reps)
+        );
+      },
+      0
+    );
+
+  completedWorkoutsValue.textContent =
+    completedWorkouts.length;
+
+  totalSetsValue.textContent =
+    totalSets;
+
+  totalRepsValue.textContent =
+    formatNumber(totalReps);
+
+  totalVolumeValue.textContent =
+    `${formatNumber(
+      totalVolume
+    )} ${weightUnit}`;
 }
 
 
@@ -2114,14 +3273,70 @@ function loadArray(key) {
    GENERAL HELPERS
 ------------------------- */
 
+const messageTimers =
+  new WeakMap();
+
+
 function showMessage(
   element,
   message,
   type = "normal"
 ) {
+  if (!element) {
+    return;
+  }
+
+  const existingTimer =
+    messageTimers.get(element);
+
+  if (existingTimer) {
+    window.clearTimeout(
+      existingTimer
+    );
+  }
+
+  element.classList.remove(
+    "message-fading"
+  );
+
   element.textContent = message;
   element.className =
     `result ${type}`;
+
+  if (!message) {
+    messageTimers.delete(element);
+    return;
+  }
+
+  const timer =
+    window.setTimeout(
+      function () {
+        element.classList.add(
+          "message-fading"
+        );
+
+        window.setTimeout(
+          function () {
+            if (
+              element.classList.contains(
+                "message-fading"
+              )
+            ) {
+              element.textContent = "";
+              element.className =
+                "result";
+            }
+          },
+          350
+        );
+      },
+      5000
+    );
+
+  messageTimers.set(
+    element,
+    timer
+  );
 }
 
 
@@ -2153,13 +3368,24 @@ function formatNumericDate(dateString) {
 
 
 function formatWeight(value) {
-  const weight =
-    Number(value);
+  const weight = Number(value);
 
-  return Number.isInteger(weight)
-    ? weight
-    : weight.toFixed(1);
+  if (!Number.isFinite(weight)) {
+    return "";
+  }
+
+  const roundedWeight =
+    Math.round(
+      (weight + Number.EPSILON) * 10
+    ) / 10;
+
+  return Number.isInteger(
+    roundedWeight
+  )
+    ? String(roundedWeight)
+    : roundedWeight.toFixed(1);
 }
+
 
 
 function formatNumber(value) {
@@ -2209,20 +3435,43 @@ function escapeHtml(value) {
    INITIALIZATION
 ------------------------- */
 
-if (
-  activeWorkoutId &&
-  !getActiveWorkout()
-) {
-  activeWorkoutId = null;
+function initializeApp() {
+  calculations = loadArray(
+    STORAGE_KEYS.calculations
+  );
 
-  localStorage.removeItem(
-    STORAGE_KEYS.activeWorkout
+  workouts = normalizeWorkouts(
+    loadArray(
+      STORAGE_KEYS.workouts
+    )
+  );
+
+  activeWorkoutId =
+    localStorage.getItem(
+      STORAGE_KEYS.activeWorkout
+    );
+
+  if (
+    activeWorkoutId &&
+    !getActiveWorkout()
+  ) {
+    activeWorkoutId = null;
+
+    localStorage.removeItem(
+      STORAGE_KEYS.activeWorkout
+    );
+  }
+
+  setDefaultWorkoutDate();
+  saveWorkouts();
+
+  renderCalculations();
+  renderWorkoutApp();
+  renderProgress();
+  updateDisplayedUnits();
+  openCalculatorMode(
+    "one-rep-max"
   );
 }
 
-setDefaultWorkoutDate();
-saveWorkouts();
-
-renderCalculations();
-renderWorkoutApp();
-renderProgress();
+initializeApp();
