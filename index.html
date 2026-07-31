@@ -10,6 +10,11 @@
 
   <title>Spotter</title>
 
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+  >
+
   <link rel="stylesheet" href="./style.css">
 </head>
 
@@ -17,7 +22,7 @@
   <main class="app">
     <header class="site-header">
       <img
-        src="https://raw.githubusercontent.com/patrickmedek21/Spotter-assets/main/spotter.png"
+        src="https://patrickmedek21.github.io/Spotter/spotter-main-logo.png"
         alt="Spotter Logo"
         class="site-logo"
       >
@@ -26,6 +31,28 @@
         Strength Training, Simplified.
       </p>
     </header>
+
+    <div
+      class="unit-toggle"
+      role="group"
+      aria-label="Weight unit"
+    >
+      <button
+        id="poundsButton"
+        class="unit-button active"
+        type="button"
+      >
+        lb
+      </button>
+
+      <button
+        id="kilogramsButton"
+        class="unit-button"
+        type="button"
+      >
+        kg
+      </button>
+    </div>
 
     <nav
       class="tab-navigation"
@@ -36,7 +63,8 @@
         type="button"
         data-tab="calculatorTab"
       >
-        Estimated 1RM Calculator
+        <i class="fa-solid fa-calculator" aria-hidden="true"></i>
+        <span>Calculators</span>
       </button>
 
       <button
@@ -44,7 +72,8 @@
         type="button"
         data-tab="workoutTab"
       >
-        Workout Logger
+        <i class="fa-solid fa-dumbbell" aria-hidden="true"></i>
+        <span>Workout Logger</span>
       </button>
 
       <button
@@ -52,124 +81,274 @@
         type="button"
         data-tab="progressTab"
       >
-        Progress
+        <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+        <span>Progress</span>
       </button>
     </nav>
 
-    <!-- ESTIMATED 1RM CALCULATOR -->
+    <!-- CALCULATORS -->
 
     <section
       id="calculatorTab"
       class="tab-panel active"
     >
-      <section class="card">
-        <h2>Estimated 1RM Calculator</h2>
-
-        <div class="lift-form">
-          <div class="form-field">
-            <label for="calculatorExercise">
-              Exercise
-            </label>
-
-            <select id="calculatorExercise">
-              <option value="Bench Press">
-                Bench Press
-              </option>
-
-              <option value="Squat">
-                Squat
-              </option>
-
-              <option value="Deadlift">
-                Deadlift
-              </option>
-
-              <option value="Overhead Press">
-                Overhead Press
-              </option>
-            </select>
-          </div>
-
-          <div class="measurement-row">
-            <div class="form-field">
-              <label for="calculatorWeight">
-                Weight (lb)
-              </label>
-
-              <input
-                id="calculatorWeight"
-                type="number"
-                min="0"
-                step="5"
-              >
-            </div>
-
-            <div class="form-field">
-              <label for="calculatorReps">
-                Reps
-              </label>
-
-              <select id="calculatorReps"></select>
-            </div>
-          </div>
-        </div>
-
-        <div class="button-row">
-          <button
-            id="calculateButton"
-            type="button"
-          >
-            Calculate
-          </button>
-
-          <button
-            id="saveCalculationButton"
-            class="secondary-button"
-            type="button"
-          >
-            Save Calculation
-          </button>
-        </div>
-
-        <div
-          id="calculatorResult"
-          class="result"
-          aria-live="polite"
-        ></div>
-      </section>
-
-      <section
-        id="savedCalculationsSection"
-        class="card hidden"
+      <div
+        class="calculator-mode-toggle"
+        role="tablist"
+        aria-label="Calculator type"
       >
-        <div class="section-heading">
-          <h2>Saved Calculations</h2>
+        <button
+          id="oneRepMaxModeButton"
+          class="calculator-mode-button active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="oneRepMaxCalculatorPanel"
+        >
+          <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+          <span>1RM Estimator</span>
+        </button>
 
-          <button
-            id="clearCalculationsButton"
-            class="danger-button"
-            type="button"
-          >
-            Clear All
-          </button>
-        </div>
+        <button
+          id="repMaxModeButton"
+          class="calculator-mode-button"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="repMaxCalculatorPanel"
+        >
+          <i class="fa-solid fa-table" aria-hidden="true"></i>
+          <span>Rep Max Table</span>
+        </button>
+      </div>
 
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Exercise</th>
-                <th>Weight</th>
-                <th>Reps</th>
-                <th>Estimated 1RM</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+      <div
+        id="oneRepMaxCalculatorPanel"
+        class="calculator-mode-panel active"
+        role="tabpanel"
+      >
+        <section class="card">
+          <h2 class="card-title">
+            <span class="heading-icon" aria-hidden="true">
+              <i class="fa-solid fa-bolt"></i>
+            </span>
+            <span>Estimated 1RM Calculator</span>
+          </h2>
 
-            <tbody id="calculationHistory"></tbody>
-          </table>
-        </div>
-      </section>
+          <div class="lift-form">
+            <div class="form-field">
+              <label for="calculatorExercise">
+                Exercise
+              </label>
+
+              <select id="calculatorExercise">
+                <option value="Bench Press">Bench Press</option>
+                <option value="Squat">Squat</option>
+                <option value="Deadlift">Deadlift</option>
+                <option value="Overhead Press">Overhead Press</option>
+              </select>
+            </div>
+
+            <div class="measurement-row">
+              <div class="form-field">
+                <label
+                  for="calculatorWeight"
+                  data-weight-label
+                >
+                  Weight (lb)
+                </label>
+
+                <input
+                  id="calculatorWeight"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="Enter exercise weight"
+                >
+              </div>
+
+              <div class="form-field">
+                <label for="calculatorReps">
+                  Reps
+                </label>
+
+                <input
+                  id="calculatorReps"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="Enter reps"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button
+              id="calculateButton"
+              type="button"
+            >
+              Calculate
+            </button>
+
+            <button
+              id="saveCalculationButton"
+              class="secondary-button"
+              type="button"
+            >
+              Save Calculation
+            </button>
+          </div>
+
+          <div
+            id="calculatorResult"
+            class="result"
+            aria-live="polite"
+          ></div>
+        </section>
+
+        <section
+          id="savedCalculationsSection"
+          class="card hidden"
+        >
+          <div class="section-heading">
+            <h2 class="card-title">
+              <span class="heading-icon heading-icon-soft" aria-hidden="true">
+                <i class="fa-solid fa-bookmark"></i>
+              </span>
+              <span>Saved Calculations</span>
+            </h2>
+
+            <button
+              id="clearCalculationsButton"
+              class="danger-button"
+              type="button"
+            >
+              Clear All
+            </button>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Exercise</th>
+                  <th>Weight</th>
+                  <th>Reps</th>
+                  <th>Estimated 1RM</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody id="calculationHistory"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div
+        id="repMaxCalculatorPanel"
+        class="calculator-mode-panel"
+        role="tabpanel"
+        hidden
+      >
+        <section class="card">
+          <h2 class="card-title">
+            <span class="heading-icon" aria-hidden="true">
+              <i class="fa-solid fa-table"></i>
+            </span>
+            <span>Rep Max Table</span>
+          </h2>
+
+          <div class="lift-form">
+            <div class="form-field">
+              <label for="repMaxExercise">
+                Exercise
+              </label>
+
+              <select id="repMaxExercise">
+                <option value="Bench Press">Bench Press</option>
+                <option value="Squat">Squat</option>
+                <option value="Deadlift">Deadlift</option>
+                <option value="Overhead Press">Overhead Press</option>
+              </select>
+            </div>
+
+            <div class="measurement-row">
+              <div class="form-field">
+                <label
+                  for="repMaxWeight"
+                  data-weight-label
+                >
+                  Weight (lb)
+                </label>
+
+                <input
+                  id="repMaxWeight"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="Enter exercise weight"
+                >
+              </div>
+
+              <div class="form-field">
+                <label for="repMaxReps">
+                  Reps
+                </label>
+
+                <input
+                  id="repMaxReps"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="Enter reps"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button
+              id="generateRepMaxTableButton"
+              type="button"
+            >
+              Calculate
+            </button>
+          </div>
+
+          <div
+            id="repMaxResult"
+            class="result"
+            aria-live="polite"
+          ></div>
+        </section>
+
+        <section
+          id="repMaxResultsSection"
+          class="card hidden"
+        >
+          <h2 class="card-title">
+            <span class="heading-icon heading-icon-soft" aria-hidden="true">
+              <i class="fa-solid fa-list-ol"></i>
+            </span>
+            <span>Equivalent Rep Maxes</span>
+          </h2>
+
+          <div class="table-wrapper">
+            <table class="rep-max-table">
+              <thead>
+                <tr>
+                  <th>Reps</th>
+                  <th>Weight</th>
+                </tr>
+              </thead>
+
+              <tbody id="repMaxTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </section>
 
     <!-- WORKOUT LOGGER -->
@@ -182,7 +361,12 @@
         id="createWorkoutCard"
         class="card"
       >
-        <h2>New Workout</h2>
+        <h2 class="card-title">
+          <span class="heading-icon" aria-hidden="true">
+            <i class="fa-solid fa-dumbbell"></i>
+          </span>
+          <span>New Workout</span>
+        </h2>
 
         <div class="form-grid">
           <div class="form-field">
@@ -225,12 +409,67 @@
       </section>
 
       <section
+        id="workoutViewSection"
+        class="hidden"
+      >
+        <section class="workout-view-header">
+          <div>
+            <button
+              id="backToWorkoutHistoryButton"
+              class="text-button"
+              type="button"
+            >
+              <i
+                class="fa-solid fa-arrow-left"
+                aria-hidden="true"
+              ></i>
+              <span>Back to Workout Logger</span>
+            </button>
+
+            <span class="eyebrow workout-view-eyebrow">
+              Completed Workout
+            </span>
+
+            <h2 id="viewedWorkoutName"></h2>
+
+            <p
+              id="viewedWorkoutDate"
+              class="workout-view-date"
+            ></p>
+          </div>
+
+          <button
+            id="editViewedWorkoutButton"
+            type="button"
+          >
+            <i
+              class="fa-solid fa-pen"
+              aria-hidden="true"
+            ></i>
+            <span>Edit Workout</span>
+          </button>
+        </section>
+
+        <section class="card">
+          <div
+            id="viewedWorkoutSummary"
+            class="workout-summary-grid"
+          ></div>
+
+          <div id="viewedWorkoutExercises"></div>
+        </section>
+      </section>
+
+      <section
         id="activeWorkoutSection"
         class="hidden"
       >
         <section class="active-workout-card">
           <div>
-            <span class="eyebrow">
+            <span
+              id="activeWorkoutEyebrow"
+              class="eyebrow"
+            >
               Active Workout
             </span>
 
@@ -247,12 +486,24 @@
             class="outline-dark-button"
             type="button"
           >
-            Finish Workout
+            <i
+              id="finishWorkoutButtonIcon"
+              class="fa-solid fa-flag-checkered"
+              aria-hidden="true"
+            ></i>
+            <span id="finishWorkoutButtonText">
+              Finish Workout
+            </span>
           </button>
         </section>
 
         <section class="card">
-          <h2>Log a Set</h2>
+          <h2 class="card-title">
+          <span class="heading-icon" aria-hidden="true">
+            <i class="fa-solid fa-plus"></i>
+          </span>
+          <span>Log a Set</span>
+        </h2>
 
           <div class="lift-form">
             <div class="form-field">
@@ -281,15 +532,19 @@
 
             <div class="measurement-row">
               <div class="form-field">
-                <label for="workoutWeight">
+                <label
+                  for="workoutWeight"
+                  data-weight-label
+                >
                   Weight (lb)
                 </label>
 
                 <input
                   id="workoutWeight"
-                  type="number"
-                  min="0"
-                  step="5"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="Enter exercise weight"
                 >
               </div>
 
@@ -298,7 +553,13 @@
                   Reps
                 </label>
 
-                <select id="workoutReps"></select>
+                <input
+                  id="workoutReps"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="Enter reps"
+                >
               </div>
             </div>
           </div>
@@ -328,7 +589,12 @@
         </section>
 
         <section class="card">
-          <h2>Current Workout</h2>
+          <h2 class="card-title">
+          <span class="heading-icon heading-icon-soft" aria-hidden="true">
+            <i class="fa-solid fa-clipboard-list"></i>
+          </span>
+          <span>Current Workout</span>
+        </h2>
 
           <div id="activeWorkoutExercises"></div>
         </section>
@@ -339,7 +605,12 @@
         class="card hidden"
       >
         <div class="section-heading">
-          <h2>Workout History</h2>
+          <h2 class="card-title">
+            <span class="heading-icon heading-icon-soft" aria-hidden="true">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+            </span>
+            <span>Workout History</span>
+          </h2>
         </div>
 
         <div id="workoutHistory"></div>
@@ -353,7 +624,99 @@
       class="tab-panel"
     >
       <section class="card">
-        <h2>Current PRs</h2>
+        <h2 class="card-title">
+          <span class="heading-icon" aria-hidden="true">
+            <i class="fa-solid fa-chart-line"></i>
+          </span>
+          <span>Progress Overview</span>
+        </h2>
+
+        <div class="progress-kpi-grid">
+          <article class="progress-kpi-card">
+            <span class="progress-kpi-icon" aria-hidden="true">
+              <i class="fa-solid fa-calendar-check"></i>
+            </span>
+
+            <div>
+              <span class="progress-kpi-label">
+                Completed Workouts
+              </span>
+
+              <strong
+                id="completedWorkoutsValue"
+                class="progress-kpi-value"
+              >
+                0
+              </strong>
+            </div>
+          </article>
+
+          <article class="progress-kpi-card">
+            <span class="progress-kpi-icon" aria-hidden="true">
+              <i class="fa-solid fa-layer-group"></i>
+            </span>
+
+            <div>
+              <span class="progress-kpi-label">
+                Total Sets
+              </span>
+
+              <strong
+                id="totalSetsValue"
+                class="progress-kpi-value"
+              >
+                0
+              </strong>
+            </div>
+          </article>
+
+          <article class="progress-kpi-card">
+            <span class="progress-kpi-icon" aria-hidden="true">
+              <i class="fa-solid fa-repeat"></i>
+            </span>
+
+            <div>
+              <span class="progress-kpi-label">
+                Total Reps
+              </span>
+
+              <strong
+                id="totalRepsValue"
+                class="progress-kpi-value"
+              >
+                0
+              </strong>
+            </div>
+          </article>
+
+          <article class="progress-kpi-card">
+            <span class="progress-kpi-icon" aria-hidden="true">
+              <i class="fa-solid fa-weight-hanging"></i>
+            </span>
+
+            <div>
+              <span class="progress-kpi-label">
+                Total Volume
+              </span>
+
+              <strong
+                id="totalVolumeValue"
+                class="progress-kpi-value"
+              >
+                0 lb
+              </strong>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">
+          <span class="heading-icon heading-icon-soft" aria-hidden="true">
+            <i class="fa-solid fa-trophy"></i>
+          </span>
+          <span>Current PRs</span>
+        </h2>
 
         <div class="progress-filter">
           <div class="form-field">
@@ -410,26 +773,6 @@
     </section>
   </main>
 
-    <script>
-    function populateRepDropdown(selectId) {
-      const select = document.getElementById(selectId);
-
-      for (let reps = 1; reps <= 100; reps += 1) {
-        const option = document.createElement("option");
-
-        option.value = reps;
-        option.textContent = reps;
-
-        select.appendChild(option);
-      }
-
-      select.value = "1";
-    }
-
-    populateRepDropdown("calculatorReps");
-    populateRepDropdown("workoutReps");
-  </script>
-
-  <script src="./script.js"></script>
+<script src="./script.js"></script>
 </body>
 </html>
